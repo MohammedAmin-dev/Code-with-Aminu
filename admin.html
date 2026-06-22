@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enterprise Admin Dashboard - Code With Aminu</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+  /* Base Glassmorphism Dark Theme Design */
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+  body { 
+    background: #060613; 
+    color: #fff; 
+    min-height: 100vh; 
+    display: flex; 
+    flex-direction: column;
+    align-items: center; 
+    padding: 40px 20px;
+    position: relative; 
+    overflow-x: hidden;
+  }
+
+  /* Deep Cyber Ambient Glow */
+  body::before {
+    content: ''; position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
+    background: 
+      radial-gradient(circle at 15% 20%, rgba(59,130,246,0.18), transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(139,92,246,0.18), transparent 45%),
+      radial-gradient(circle at 50% 50%, rgba(236,72,153,0.05), transparent 50%);
+    z-index: -1;
+    animation: pulseBackground 12s ease-in-out infinite alternate;
+  }
+  @keyframes pulseBackground { 0% { transform: scale(1); } 100% { transform: scale(1.05); } }
+
+  .container {
+    background: rgba(15, 15, 35, 0.65);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 28px;
+    padding: 40px;
+    width: 100%;
+    max-width: 1050px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.65);
+    margin-bottom: 25px;
+    transition: all 0.4s ease;
+  }
+
+  h1 {
+    text-align: center; font-size: 38px; font-weight: 900; margin-bottom: 8px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    text-transform: uppercase; letter-spacing: 3px;
+  }
+  
+  .section-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 22px; border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding-bottom: 12px; flex-wrap: wrap; gap: 15px;
+  }
+  h2 { font-size: 22px; color: #f1f5f9; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+
+  /* Lock Gateway Screen Styles Layout */
+  #loginSec { max-width: 460px; text-align: center; margin-top: 12vh; border-color: rgba(59, 130, 246, 0.2); }
+  
+  .form-group { position: relative; margin-bottom: 24px; width: 100%; text-align: left; }
+  .form-group input {
+    width: 100%; padding: 18px; background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 14px;
+    color: #fff; font-size: 16px; transition: all 0.3s ease;
+  }
+  .form-group label {
+    position: absolute; left: 18px; top: 18px; color: #94a3b8; font-size: 15px;
+    transition: all 0.3s ease; pointer-events: none; background: transparent;
+  }
+  .form-group input:focus ~ label, .form-group input:not(:placeholder-shown) ~ label {
+    top: -10px; left: 14px; font-size: 12px; color: #3b82f6; background: #060613; padding: 0 8px; font-weight: 600;
+  }
+  .form-group input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 25px rgba(59, 130, 246, 0.35); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 16px 24px; background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: bold;
+    cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 18px rgba(59, 130, 246, 0.35);
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(139, 92, 246, 0.55); }
+
+  /* Control System Utility Elements Layout */
+  .search-wrapper { position: relative; width: 100%; max-width: 350px; }
+  .search-input {
+    width: 100%; padding: 12px 16px 12px 40px; background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 12px;
+    color: #fff; font-size: 14px; transition: all 0.3s;
+  }
+  .search-input:focus { outline: none; border-color: #8b5cf6; background: rgba(255,255,255,0.06); }
+  .search-icon { position: absolute; left: 14px; top: 14px; color: #64748b; font-size: 14px; }
+
+  .btn-toggle-view {
+    background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #3b82f6; padding: 10px 18px; border-radius: 12px; cursor: pointer;
+    font-weight: 600; font-size: 14px; transition: all 0.3s;
+  }
+  .btn-toggle-view:hover { background: rgba(59, 130, 246, 0.18); border-color: #3b82f6; }
+
+  /* Dashboard Counters Stats Grid Layout */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 40px; }
+  .stat-card {
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 20px; padding: 24px 20px; text-align: center; position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  }
+  .stat-card.new-users-card::before { background: linear-gradient(90deg, #22c55e, #10b981); }
+  .stat-card.feedback-card::before { background: linear-gradient(90deg, #ec4899, #f43f5e); }
+  .stat-card h3 { font-size: 13px; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 1px; }
+  .stat-card p { font-size: 36px; font-weight: 800; color: #fff; }
+
+  /* Complex Rendering Cards Grid Architecture */
+  .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 20px; transition: all 0.4s ease; }
+  .data-card {
+    background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 20px; padding: 22px; position: relative;
+    display: flex; flex-direction: column; justify-content: space-between;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); gap: 18px;
+  }
+  .data-card:hover { transform: translateY(-4px); background: rgba(255, 255, 255, 0.04); border-color: rgba(139, 92, 246, 0.35); box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
+  
+  .card-top-header { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
+  .data-info h4 { font-size: 19px; color: #fff; margin-bottom: 4px; font-weight: 700; width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .data-info .prof-tag { display: inline-block; font-size: 12px; color: #3b82f6; background: rgba(59,130,246,0.1); padding: 4px 10px; border-radius: 6px; font-weight: 600; margin-bottom: 12px; }
+  .data-info p { font-size: 14px; color: #94a3b8; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  
+  /* Dynamic Blinking Active Highlight Badge Component */
+  .badge-new {
+    background: linear-gradient(135deg, #22c55e, #10b981); color: #fff;
+    font-size: 11px; font-weight: 800; padding: 4px 9px; border-radius: 6px;
+    letter-spacing: 0.5px; box-shadow: 0 0 15px rgba(34, 197, 94, 0.5);
+    animation: flashBadge 1.5s infinite alternate;
+  }
+  @keyframes flashBadge { 0% { opacity: 0.7; } 100% { opacity: 1; } }
+
+  .comment-box-text {
+    background: rgba(0, 0, 0, 0.25); padding: 12px 16px; border-radius: 12px;
+    color: #e2e8f0; font-style: italic; border-left: 3px solid #ec4899; font-size: 14px; line-height: 1.5;
+  }
+
+  .actions-row { display: flex; gap: 10px; width: 100%; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 14px; margin-top: auto; }
+  
+  .btn-info-view {
+    flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+    color: #cbd5e1; padding: 10px; border-radius: 10px; cursor: pointer;
+    font-weight: 600; font-size: 13px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn-info-view:hover { background: rgba(255,255,255,0.09); color: #fff; border-color: rgba(255,255,255,0.2); }
+
+  .btn-delete {
+    background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25);
+    color: #ef4444; padding: 10px 14px; border-radius: 10px; cursor: pointer;
+    font-weight: 600; font-size: 13px; transition: all 0.3s;
+  }
+  .btn-delete:hover { background: #ef4444; color: #fff; box-shadow: 0 0 18px rgba(239,68,68,0.4); border-color: #ef4444; }
+
+  /* Separators & Indicators Custom Styles */
+  .divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); margin: 45px 0; }
+  .msg-box { font-size: 15px; font-weight: bold; text-align: center; margin-top: 15px; color: #ef4444; letter-spacing: 0.5px; }
+  .empty-msg { text-align: center; color: #4b5563; font-style: italic; padding: 30px; grid-column: 1 / -1; font-size: 15px; }
+  
+  .logout-btn {
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8;
+    padding: 10px 18px; border-radius: 12px; cursor: pointer; float: right; font-size: 13px; font-weight: 600; transition: all 0.3s;
+  }
+  .logout-btn:hover { border-color: #ef4444; color: #ef4444; background: rgba(239, 68, 68, 0.05); }
+
+  /* Multi-Dimension Complex Metadata Dialog Modal View Overlay Styles */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(12px);
+    display: none; align-items: center; justify-content: center; z-index: 1000;
+    opacity: 0; transition: opacity 0.3s ease;
+  }
+  .modal-overlay.active { display: flex; opacity: 1; }
+  .modal-content {
+    background: #0d0d21; border: 1px solid rgba(139, 92, 246, 0.25); border-radius: 24px;
+    padding: 35px; width: 92%; max-width: 480px; text-align: left; position: relative;
+    box-shadow: 0 0 50px rgba(139, 92, 246, 0.2); transform: translateY(20px); transition: transform 0.3s ease;
+  }
+  .modal-overlay.active .modal-content { transform: translateY(0); }
+  
+  .close-modal-btn {
+    position: absolute; top: 20px; right: 20px; background: transparent; border: none;
+    color: #94a3b8; font-size: 26px; cursor: pointer; transition: color 0.2s;
+  }
+  .close-modal-btn:hover { color: #fff; }
+  
+  .modal-header-title { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; }
+  .metadata-row { margin-bottom: 16px; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04); }
+  .metadata-label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 1px; margin-bottom: 4px; }
+  .metadata-value { font-size: 15px; color: #f1f5f9; font-weight: 600; word-break: break-all; }
+  .metadata-value span { color: #8b5cf6; }
+</style>
+</head>
+<body>
+
+<div class="container" id="loginSec">
+  <h1>Admin Access</h1>
+  <p style="color: #94a3b8; margin-bottom: 25px; font-size: 14px;">Enter credential lock code to open real-time platform system panel</p>
+  
+  <form onsubmit="handleLogin(event)">
+    <div class="form-group">
+      <input type="password" id="adminPass" placeholder=" " required>
+      <label>Password Code</label>
+    </div>
+    <div id="loginMsg" class="msg-box"></div>
+    <button type="submit" class="btn" style="width: 100%; margin-top: 10px;">🔐 Unlock Dashboard</button>
+  </form>
+</div>
+
+<div class="container" id="dashboardSec" style="display: none;">
+  <button class="logout-btn" onclick="logout()">🔒 Lock System</button>
+  <h1>System Dashboard</h1>
+  <p style="text-align: center; color: #94a3b8; margin-bottom: 30px; font-size: 14px;">Real-time Monitoring & Data Synchronization Management Tree</p>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <h3>Total Registrations</h3>
+      <p id="countUsers">0</p>
+    </div>
+    <div class="stat-card new-users-card">
+      <h3>Signups Today</h3>
+      <p id="countNewUsers">0</p>
+    </div>
+    <div class="stat-card feedback-card">
+      <h3>Feedback Received</h3>
+      <p id="countComments">0</p>
+    </div>
+  </div>
+
+  <div class="section-header">
+    <h2>👥 Registered Users Base</h2>
+    <div class="search-wrapper">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="userSearchInput" class="search-input" placeholder="Search by name, role or phone..." oninput="filterUsersTree()">
+    </div>
+  </div>
+  
+  <div class="data-grid" id="usersContainer">
+    <div class="empty-msg">Loading user records data node tree...</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-header">
+    <h2>💬 Customer Feedbacks Feed</h2>
+    <button class="btn-toggle-view" id="toggleCommentsBtn" onclick="toggleCommentsView()">👁️ Hide Feedbacks List</button>
+  </div>
+  
+  <div class="data-grid" id="commentsContainer">
+    <div class="empty-msg">Loading customer feedbacks comment tree...</div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="detailsModal">
+  <div class="modal-content">
+    <button class="close-modal-btn" onclick="closeDetailsModal()">×</button>
+    <div class="modal-header-title">📋 Full User Profile Card</div>
+    <div id="modalDetailsBody"></div>
+  </div>
+</div>
+
+<script>
+// --- FIREBASE APP CONFIGURATION SPECIFICS ---
+const firebaseConfig = {
+  apiKey: "AIzaSyDQD-5Q_17hP3IsQ2hasT3lr7canEL3yLw",
+  authDomain: "code-with-aminu.firebaseapp.com",
+  databaseURL: "https://code-with-aminu-default-rtdb.firebaseio.com",
+  projectId: "code-with-aminu",
+  storageBucket: "code-with-aminu.firebasestorage.app",
+  messagingSenderId: "784565822998",
+  appId: "1:784565822998:web:48d3c1f6000ad1e55a7737"
+};
+
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.database();
+
+// Global Runtime Memory Repositories to enable real-time advanced lookups
+let globalUsersCache = {};
+let commentsVisibleState = true;
+
+// --- SECURE ACCESS SECURITY HANDLERS ---
+function handleLogin(e) {
+  e.preventDefault();
+  const pass = document.getElementById('adminPass').value;
+  const msg = document.getElementById('loginMsg');
+
+  if (pass === "Aminu@2026") {
+    sessionStorage.setItem('aminu_admin_session', 'authenticated');
+    showDashboard();
+  } else {
+    msg.innerText = "❌ Verification Failed. Incorrect Lock Password Code!";
+    document.getElementById('adminPass').value = "";
+  }
+}
+
+function showDashboard() {
+  document.getElementById('loginSec').style.display = "none";
+  document.getElementById('dashboardSec').style.display = "block";
+  initRealtimeSync();
+}
+
+function logout() {
+  sessionStorage.removeItem('aminu_admin_session');
+  window.location.reload();
+}
+
+if (sessionStorage.getItem('aminu_admin_session') === 'authenticated') {
+  showDashboard();
+}
+
+// --- REAL-TIME DATA PROCESSING SYNC HANDLERS ---
+function initRealtimeSync() {
+  // A. Fetch and Synchronize Users Data Node Tree List
+  db.ref('users').on('value', (snapshot) => {
+    const container = document.getElementById('usersContainer');
+    const countEl = document.getElementById('countUsers');
+    const countNewEl = document.getElementById('countNewUsers');
+    container.innerHTML = "";
+    globalUsersCache = {}; // Flush cache repository
+    
+    if (!snapshot.exists()) {
+      container.innerHTML = `<div class="empty-msg">No registered users found inside 'users' database node path.</div>`;
+      countEl.innerText = "0";
+      countNewEl.innerText = "0";
+      return;
+    }
+
+    let recordsCount = 0;
+    let newTodayCount = 0;
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const nowMs = new Date().getTime();
+
+    snapshot.forEach((childSnapshot) => {
+      recordsCount++;
+      const key = childSnapshot.key;
+      const data = childSnapshot.val();
+      globalUsersCache[key] = data; // Cache storage mapping configuration references
+
+      // Time Difference check to flag recent nodes dynamically
+      const regTimeMs = data.timestamp ? new Date(data.timestamp).getTime() : 0;
+      const isNewUser = (nowMs - regTimeMs) < oneDayMs;
+      if (isNewUser) newTodayCount++;
+
+      const card = document.createElement('div');
+      card.className = "data-card user-record-node";
+      card.setAttribute('data-search-string', `${data.name} ${data.profession} ${data.phone}`.toLowerCase());
+      
+      card.innerHTML = `
+        <div class="card-top-header">
+          <div class="data-info">
+            <h4>${data.name || 'Unknown'}</h4>
+            <span class="prof-tag">${data.profession || 'Other'}</span>
+          </div>
+          ${isNewUser ? `<span class="badge-new">🆕 NEW</span>` : ''}
+        </div>
+        <div class="data-info" style="margin-top:-10px;">
+          <p>📧 ${data.email || 'None'}</p>
+          <p>📱 ${data.phone || 'None'}</p>
+        </div>
+        <div class="actions-row">
+          <button class="btn-info-view" onclick="openDetailsModal('${key}')">👁️ More Info</button>
+          <button class="btn-delete" onclick="deleteItem('users', '${key}')">🗑️ Delete</button>
+        </div>
+      `;
+      container.insertBefore(card, container.firstChild); // Render newer records matching visual priority tree
+    });
+    
+    countEl.innerText = recordsCount;
+    countNewEl.innerText = newTodayCount;
+    filterUsersTree(); // Enforce persistent active filter logic rules during streaming updates
+  });
+
+  // B. Fetch and Synchronize Comments Feedback Data Node Tree List
+  db.ref('comments').on('value', (snapshot) => {
+    const container = document.getElementById('commentsContainer');
+    const countEl = document.getElementById('countComments');
+    container.innerHTML = "";
+
+    if (!snapshot.exists()) {
+      container.innerHTML = `<div class="empty-msg">No feedback submissions found inside 'comments' database node path.</div>`;
+      countEl.innerText = "0";
+      return;
+    }
+
+    let feedbackCount = 0;
+    snapshot.forEach((childSnapshot) => {
+      feedbackCount++;
+      const key = childSnapshot.key;
+      const data = childSnapshot.val();
+
+      const card = document.createElement('div');
+      card.className = "data-card";
+      card.innerHTML = `
+        <div class="data-info" style="width: 100%;">
+          <h4 style="width:100%; white-space:normal;">${data.name || 'Anonymous'}</h4>
+          <p style="font-size:11px; color:#4b5563; margin-bottom:10px;">📅 ${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'N/A'}</p>
+          <div class="comment-box-text">"${data.comment || ''}"</div>
+        </div>
+        <div class="actions-row">
+          <button class="btn-delete" style="flex:1;" onclick="deleteItem('comments', '${key}')">🗑️ Remove Feedback</button>
+        </div>
+      `;
+      container.insertBefore(card, container.firstChild);
+    });
+    countEl.innerText = feedbackCount;
+  });
+}
+
+// --- COMPLEX INTERACTIVE SEARCH ARCHITECTURE RULES ---
+function filterUsersTree() {
+  const query = document.getElementById('userSearchInput').value.trim().toLowerCase();
+  const cards = document.querySelectorAll('.user-record-node');
+  
+  cards.forEach(card => {
+    const searchStr = card.getAttribute('data-search-string');
+    if (searchStr.includes(query)) {
+      card.style.display = "flex";
+    } else {
+      card.style.display = "none";
+    }
+  });
+}
+
+// --- TOGGLE COMMENTS VISIBLE VISUAL CONTROL STATES ---
+function toggleCommentsView() {
+  const container = document.getElementById('commentsContainer');
+  const btn = document.getElementById('toggleCommentsBtn');
+  
+  commentsVisibleState = !commentsVisibleState;
+  
+  if (commentsVisibleState) {
+    container.style.display = "grid";
+    btn.innerHTML = "👁️ Hide Feedbacks List";
+    btn.style.background = "rgba(59, 130, 246, 0.08)";
+  } else {
+    container.style.display = "none";
+    btn.innerHTML = "👁️ Show Feedbacks List";
+    btn.style.background = "rgba(236, 72, 153, 0.08)";
+    btn.style.borderColor = "rgba(236, 72, 153, 0.3)";
+    btn.style.color = "#ec4899";
+  }
+}
+
+// --- DYNAMIC MODAL METADATA POPUP DIALOG WINDOW RENDERING SYSTEM ---
+function openDetailsModal(key) {
+  const userData = globalUsersCache[key];
+  if (!userData) return;
+
+  const modalBody = document.getElementById('modalDetailsBody');
+  modalBody.innerHTML = `
+    <div class="metadata-row">
+      <div class="metadata-label">Firebase Node unique Key</div>
+      <div class="metadata-value" style="font-family: monospace; color:#8b5cf6;">${key}</div>
+    </div>
+    <div class="metadata-row">
+      <div class="metadata-label">Full Name</div>
+      <div class="metadata-value">${userData.name || 'N/A'}</div>
+    </div>
+    <div class="metadata-row">
+      <div class="metadata-label">Email Address</div>
+      <div class="metadata-value">${userData.email || 'N/A'}</div>
+    </div>
+    <div class="metadata-row">
+      <div class="metadata-label">Phone Connection</div>
+      <div class="metadata-value" style="color: #22c55e;">${userData.phone || 'N/A'}</div>
+    </div>
+    <div class="metadata-row">
+      <div class="metadata-label">Telegram Handle</div>
+      <div class="metadata-value" style="color: #3b82f6;">${userData.telegram || 'Not Provided'}</div>
+    </div>
+    <div class="metadata-row">
+      <div class="metadata-label">Professional Category</div>
+      <div class="metadata-value"><span>${userData.profession || 'N/A'}</span></div>
+    </div>
+    <div class="metadata-row">
+      <div class="metadata-label">Exact ISO Timestamp</div>
+      <div class="metadata-value" style="font-size:13px;">📅 ${userData.timestamp ? new Date(userData.timestamp).toLocaleString() : 'N/A'}<br><small style="color:#4b5563;">${userData.timestamp || ''}</small></div>
+    </div>
+  `;
+  
+  document.getElementById('detailsModal').classList.add('active');
+}
+
+function closeDetailsModal() {
+  document.getElementById('detailsModal').classList.remove('active');
+}
+
+// --- DATABASE RECORDS HARD DELETION REMOVAL FUNCTION ---
+function deleteItem(path, key) {
+  if (confirm(`⚠️ Are you sure you want to permanently delete this record from the Firebase '${path}' folder tree node?`)) {
+    db.ref(`${path}/${key}`).remove()
+      .then(() => {
+        alert("✅ Record successfully purged from database node instance tree.");
+        closeDetailsModal();
+      })
+      .catch((err) => {
+        alert("❌ Access denied. Deletion failed check security database configurations.");
+        console.error(err);
+      });
+  }
+}
+</script>
+</body>
+</html>
